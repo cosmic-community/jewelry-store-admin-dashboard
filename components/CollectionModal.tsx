@@ -1,132 +1,179 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { createCollection } from '@/lib/cosmic'
+import type { Collection } from '@/types'
 
 interface CollectionModalProps {
+  isOpen: boolean
   onClose: () => void
+  onSave: (collection: Collection) => void
 }
 
-export default function CollectionModal({ onClose }: CollectionModalProps) {
-  const [loading, setLoading] = useState(false)
+export default function CollectionModal({ isOpen, onClose, onSave }: CollectionModalProps) {
   const [formData, setFormData] = useState({
     title: '',
     name: '',
     description: '',
     active: true
   })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  async function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    if (isOpen) {
+      // Reset form when modal opens
+      setFormData({
+        title: '',
+        name: '',
+        description: '',
+        active: true
+      })
+      setError(null)
+    }
+  }, [isOpen])
+
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setError(null)
+
+    // Validation
+    if (!formData.title.trim()) {
+      setError('Collection title is required')
+      return
+    }
+    
+    if (!formData.name.trim()) {
+      setError('Collection name is required')
+      return
+    }
+
+    handleSave()
+  }
+
+  async function handleSave() {
     setLoading(true)
+    setError(null)
 
     try {
       const collectionData = {
+        title: formData.title.trim(),
         type: 'collections',
-        title: formData.title || formData.name,
+        status: 'published',
         metadata: {
-          name: formData.name,
-          description: formData.description,
+          name: formData.name.trim(),
+          description: formData.description.trim() || '',
           active: formData.active
         }
       }
 
-      await createCollection(collectionData)
+      const savedCollection = await createCollection(collectionData)
+      onSave(savedCollection)
       onClose()
     } catch (error) {
       console.error('Error saving collection:', error)
-      alert('Failed to save collection. Please try again.')
+      setError(error instanceof Error ? error.message : 'Failed to save collection. Please check all fields and try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} />
+  if (!isOpen) return null
 
-        <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-          <div className="absolute top-0 right-0 pt-4 pr-4">
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Add New Collection</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+            disabled={loading}
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Collection Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              placeholder="Engagement Rings"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Display Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              placeholder="Engagement Rings"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Description
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              rows={3}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              placeholder="Discover our exquisite collection of engagement rings..."
+            />
+          </div>
+
+          <div className="flex items-center">
+            <input
+              id="active"
+              type="checkbox"
+              checked={formData.active}
+              onChange={(e) => setFormData(prev => ({ ...prev, active: e.target.checked }))}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="active" className="ml-2 block text-sm text-gray-900">
+              Active Collection
+            </label>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
-              className="bg-white rounded-md text-gray-400 hover:text-gray-600 focus:outline-none"
               onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              disabled={loading}
             >
-              <X className="h-6 w-6" />
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              disabled={loading}
+            >
+              {loading ? 'Creating...' : 'Create Collection'}
             </button>
           </div>
-
-          <div className="sm:flex sm:items-start">
-            <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                Add New Collection
-              </h3>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                    Collection Name *
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    required
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value, title: e.target.value })}
-                    placeholder="e.g., Engagement Rings, Vintage Collection"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                    Description
-                  </label>
-                  <textarea
-                    id="description"
-                    rows={4}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Describe this collection and what makes it special..."
-                  />
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    id="active"
-                    type="checkbox"
-                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                    checked={formData.active}
-                    onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                  />
-                  <label htmlFor="active" className="ml-2 block text-sm text-gray-900">
-                    Collection is active and visible
-                  </label>
-                </div>
-
-                <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? 'Creating...' : 'Create Collection'}
-                  </button>
-                  <button
-                    type="button"
-                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:w-auto sm:text-sm"
-                    onClick={onClose}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
+        </form>
       </div>
     </div>
   )
