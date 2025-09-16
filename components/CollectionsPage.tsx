@@ -71,12 +71,12 @@ export default function CollectionsPage() {
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="h-48 bg-gray-300"></div>
+              <div className="aspect-w-16 aspect-h-9 bg-gray-300"></div>
               <div className="p-6">
-                <div className="h-6 bg-gray-300 rounded mb-2"></div>
-                <div className="h-4 bg-gray-300 rounded mb-4"></div>
-                <div className="flex space-x-2">
-                  <div className="h-8 bg-gray-300 rounded flex-1"></div>
+                <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                <div className="h-16 bg-gray-300 rounded mb-4"></div>
+                <div className="flex justify-between">
+                  <div className="h-8 bg-gray-300 rounded w-16"></div>
                   <div className="h-8 bg-gray-300 rounded w-8"></div>
                 </div>
               </div>
@@ -93,7 +93,7 @@ export default function CollectionsPage() {
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-bold text-gray-900">Collections</h1>
           <p className="mt-1 text-sm text-gray-600">
-            Organize your jewelry products into collections for better discovery
+            Organize your jewelry into curated collections like engagement rings, necklaces, and bracelets
           </p>
         </div>
         <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
@@ -113,7 +113,7 @@ export default function CollectionsPage() {
           <FolderOpen className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No collections</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Get started by creating a new collection to organize your jewelry.
+            Get started by creating your first product collection.
           </p>
           <div className="mt-6">
             <button
@@ -130,43 +130,45 @@ export default function CollectionsPage() {
         <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {collections.map((collection) => (
             <div key={collection.id} className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="h-48 bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center">
-                {collection.metadata.featured_image ? (
+              <div className="aspect-w-16 aspect-h-9 w-full">
+                {collection.metadata.featured_image?.imgix_url ? (
                   <img
-                    className="h-full w-full object-cover"
+                    className="h-48 w-full object-cover"
                     src={`${collection.metadata.featured_image.imgix_url}?w=400&h=192&fit=crop&auto=format,compress`}
                     alt={collection.metadata.name}
                     width="400"
                     height="192"
                   />
                 ) : (
-                  <FolderOpen className="h-16 w-16 text-white" />
+                  <div className="h-48 bg-gray-200 flex items-center justify-center">
+                    <FolderOpen className="h-12 w-12 text-gray-400" />
+                  </div>
                 )}
               </div>
               <div className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-medium text-gray-900 truncate">
+                    <h3 className="text-lg font-medium text-gray-900">
                       {collection.metadata.name}
                     </h3>
                     {collection.metadata.description && (
-                      <div 
-                        className="mt-1 text-sm text-gray-500 line-clamp-2"
+                      <div
+                        className="mt-2 text-sm text-gray-600 line-clamp-3"
                         dangerouslySetInnerHTML={{ __html: collection.metadata.description }}
                       />
                     )}
-                  </div>
-                  <div className="ml-4 flex items-center space-x-2">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      collection.metadata.active 
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {collection.metadata.active ? 'Active' : 'Inactive'}
-                    </span>
+                    <div className="mt-3">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        collection.metadata.active 
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {collection.metadata.active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div className="mt-4 flex justify-between">
+                <div className="mt-6 flex justify-between">
                   <button
                     onClick={() => handleEditCollection(collection)}
                     className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
