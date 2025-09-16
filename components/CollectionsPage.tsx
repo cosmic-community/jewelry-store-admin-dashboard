@@ -1,15 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, FolderOpen, Eye, EyeOff } from 'lucide-react'
+import { Plus, Edit2, Trash2, FolderOpen } from 'lucide-react'
 import { getCollections, deleteCollection } from '@/lib/cosmic'
+import CollectionModal from './CollectionModal'
 import type { Collection } from '@/types'
-import CollectionModal from '@/components/CollectionModal'
 
 export default function CollectionsPage() {
   const [collections, setCollections] = useState<Collection[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [editingCollection, setEditingCollection] = useState<Collection | null>(null)
 
   useEffect(() => {
     fetchCollections()
@@ -39,29 +40,45 @@ export default function CollectionsPage() {
     }
   }
 
-  function handleAddCollection() {
+  function handleEditCollection(collection: Collection) {
+    setEditingCollection(collection)
     setShowModal(true)
   }
 
-  function handleModalClose() {
+  function handleCreateCollection() {
+    setEditingCollection(null)
+    setShowModal(true)
+  }
+
+  function handleCloseModal() {
     setShowModal(false)
-    fetchCollections() // Refresh the list
+    setEditingCollection(null)
+  }
+
+  async function handleSaveCollection() {
+    // Refresh collections after save
+    await fetchCollections()
+    handleCloseModal()
   }
 
   if (loading) {
     return (
       <div className="animate-pulse">
-        <div className="flex justify-between items-center mb-6">
-          <div className="h-8 bg-gray-300 rounded w-32"></div>
-          <div className="h-10 bg-gray-300 rounded w-32"></div>
+        <div className="mb-6">
+          <div className="h-8 bg-gray-300 rounded w-32 mb-2"></div>
+          <div className="h-4 bg-gray-300 rounded w-96"></div>
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="bg-white overflow-hidden shadow rounded-lg">
               <div className="h-48 bg-gray-300"></div>
               <div className="p-6">
-                <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                <div className="h-6 bg-gray-300 rounded mb-2"></div>
+                <div className="h-4 bg-gray-300 rounded mb-4"></div>
+                <div className="flex space-x-2">
+                  <div className="h-8 bg-gray-300 rounded flex-1"></div>
+                  <div className="h-8 bg-gray-300 rounded w-8"></div>
+                </div>
               </div>
             </div>
           ))}
@@ -72,19 +89,20 @@ export default function CollectionsPage() {
 
   return (
     <div>
-      <div className="sm:flex sm:items-center sm:justify-between mb-6">
-        <div>
+      <div className="sm:flex sm:items-center">
+        <div className="sm:flex-auto">
           <h1 className="text-2xl font-bold text-gray-900">Collections</h1>
           <p className="mt-1 text-sm text-gray-600">
-            Organize your jewelry into collections like rings, necklaces, and bracelets
+            Organize your jewelry products into collections for better discovery
           </p>
         </div>
-        <div className="mt-4 sm:mt-0">
+        <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
           <button
-            onClick={handleAddCollection}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            type="button"
+            onClick={handleCreateCollection}
+            className="block rounded-md bg-blue-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 inline mr-2" />
             Add Collection
           </button>
         </div>
@@ -95,76 +113,73 @@ export default function CollectionsPage() {
           <FolderOpen className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No collections</h3>
           <p className="mt-1 text-sm text-gray-500">
-            Get started by creating your first product collection.
+            Get started by creating a new collection to organize your jewelry.
           </p>
           <div className="mt-6">
             <button
-              onClick={handleAddCollection}
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              type="button"
+              onClick={handleCreateCollection}
+              className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Collection
+              <Plus className="-ml-0.5 mr-1.5 h-5 w-5" />
+              New Collection
             </button>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {collections.map((collection) => (
-            <div key={collection.id} className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow">
-              <div className="h-48 bg-gray-200 relative">
+            <div key={collection.id} className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="h-48 bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center">
                 {collection.metadata.featured_image ? (
                   <img
                     className="h-full w-full object-cover"
-                    src={`${collection.metadata.featured_image.imgix_url}?w=400&h=300&fit=crop&auto=format,compress`}
+                    src={`${collection.metadata.featured_image.imgix_url}?w=400&h=192&fit=crop&auto=format,compress`}
                     alt={collection.metadata.name}
                     width="400"
-                    height="300"
+                    height="192"
                   />
                 ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <FolderOpen className="h-16 w-16 text-gray-400" />
-                  </div>
+                  <FolderOpen className="h-16 w-16 text-white" />
                 )}
-                <div className="absolute top-2 right-2 flex space-x-2">
-                  <div className={`p-2 rounded-full ${collection.metadata.active ? 'bg-green-100' : 'bg-gray-100'}`}>
-                    {collection.metadata.active ? (
-                      <Eye className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <EyeOff className="h-4 w-4 text-gray-600" />
-                    )}
-                  </div>
-                </div>
               </div>
-              <div className="px-6 py-4">
+              <div className="p-6">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-medium text-gray-900 truncate">
                       {collection.metadata.name}
                     </h3>
-                    <div className="flex items-center text-sm text-gray-500 mb-3">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        collection.metadata.active 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {collection.metadata.active ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
                     {collection.metadata.description && (
                       <div 
-                        className="text-sm text-gray-600 line-clamp-2"
+                        className="mt-1 text-sm text-gray-500 line-clamp-2"
                         dangerouslySetInnerHTML={{ __html: collection.metadata.description }}
                       />
                     )}
                   </div>
-                  <div className="ml-4">
-                    <button
-                      onClick={() => handleDeleteCollection(collection.id)}
-                      className="p-2 text-gray-400 hover:text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                  <div className="ml-4 flex items-center space-x-2">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      collection.metadata.active 
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {collection.metadata.active ? 'Active' : 'Inactive'}
+                    </span>
                   </div>
+                </div>
+                <div className="mt-4 flex justify-between">
+                  <button
+                    onClick={() => handleEditCollection(collection)}
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCollection(collection.id)}
+                    className="inline-flex items-center px-3 py-2 text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -172,9 +187,13 @@ export default function CollectionsPage() {
         </div>
       )}
 
-      {/* Collection Modal */}
       {showModal && (
-        <CollectionModal onClose={handleModalClose} />
+        <CollectionModal
+          isOpen={showModal}
+          collection={editingCollection}
+          onClose={handleCloseModal}
+          onSave={handleSaveCollection}
+        />
       )}
     </div>
   )
