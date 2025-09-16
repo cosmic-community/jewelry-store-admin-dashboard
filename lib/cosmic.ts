@@ -104,6 +104,16 @@ export async function createCollection(collectionData: any): Promise<Collection>
   }
 }
 
+export async function updateCollection(id: string, collectionData: any): Promise<Collection> {
+  try {
+    const response = await cosmic.objects.updateOne(id, collectionData);
+    return response.object as Collection;
+  } catch (error) {
+    console.error('Error updating collection:', error);
+    throw new Error('Failed to update collection');
+  }
+}
+
 export async function deleteCollection(id: string): Promise<void> {
   try {
     await cosmic.objects.deleteOne(id);

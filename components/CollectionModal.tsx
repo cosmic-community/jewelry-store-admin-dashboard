@@ -2,78 +2,86 @@
 
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
-import { createCollection } from '@/lib/cosmic'
-import type { Collection } from '@/types'
+import { createCollection, updateCollection } from '@/lib/cosmic'
+import type { Collection, CreateCollectionData } from '@/types'
 
 interface CollectionModalProps {
   isOpen: boolean
+  collection: Collection | null
   onClose: () => void
-  onSave: (collection: Collection) => void
+  onSave: () => Promise<void>
 }
 
-export default function CollectionModal({ isOpen, onClose, onSave }: CollectionModalProps) {
-  const [formData, setFormData] = useState({
+export default function CollectionModal({ 
+  isOpen, 
+  collection, 
+  onClose, 
+  onSave 
+}: CollectionModalProps) {
+  const [formData, setFormData] = useState<CreateCollectionData>({
     title: '',
-    name: '',
-    description: '',
-    active: true
+    metadata: {
+      name: '',
+      description: '',
+      active: true
+    }
   })
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (isOpen) {
-      // Reset form when modal opens
+    if (collection) {
+      // Editing existing collection
+      setFormData({
+        title: collection.title,
+        metadata: {
+          name: collection.metadata.name || collection.title,
+          description: collection.metadata.description || '',
+          active: collection.metadata.active ?? true
+        }
+      })
+    } else {
+      // Creating new collection
       setFormData({
         title: '',
-        name: '',
-        description: '',
-        active: true
+        metadata: {
+          name: '',
+          description: '',
+          active: true
+        }
       })
-      setError(null)
     }
-  }, [isOpen])
+  }, [collection, isOpen])
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
+    if (!formData.title.trim()) return
 
-    // Validation
-    if (!formData.title.trim()) {
-      setError('Collection title is required')
-      return
-    }
-    
-    if (!formData.name.trim()) {
-      setError('Collection name is required')
-      return
-    }
-
-    handleSave()
-  }
-
-  async function handleSave() {
     setLoading(true)
-    setError(null)
-
     try {
       const collectionData = {
         title: formData.title.trim(),
         type: 'collections',
         status: 'published',
         metadata: {
-          name: formData.name.trim(),
-          description: formData.description.trim() || '',
-          active: formData.active
+          name: formData.metadata.name || formData.title.trim(),
+          description: formData.metadata.description,
+          active: formData.metadata.active
         }
       }
 
-      const savedCollection = await createCollection(collectionData)
-      onSave(savedCollection)
+      if (collection) {
+        // Update existing collection
+        await updateCollection(collection.id, collectionData)
+      } else {
+        // Create new collection
+        await createCollection(collectionData)
+      }
+      
+      await onSave()
       onClose()
     } catch (error) {
       console.error('Error saving collection:', error)
-      setError(error instanceof Error ? error.message : 'Failed to save collection. Please check all fields and try again.')
+      alert('Failed to save collection')
     } finally {
       setLoading(false)
     }
@@ -82,98 +90,101 @@ export default function CollectionModal({ isOpen, onClose, onSave }: CollectionM
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Add New Collection</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-            disabled={loading}
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Collection Title <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              placeholder="Engagement Rings"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Display Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              placeholder="Engagement Rings"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Description
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              rows={3}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              placeholder="Discover our exquisite collection of engagement rings..."
-            />
-          </div>
-
-          <div className="flex items-center">
-            <input
-              id="active"
-              type="checkbox"
-              checked={formData.active}
-              onChange={(e) => setFormData(prev => ({ ...prev, active: e.target.checked }))}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="active" className="ml-2 block text-sm text-gray-900">
-              Active Collection
-            </label>
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75" onClick={onClose} />
+        
+        <div className="relative w-full max-w-md transform rounded-lg bg-white p-6 shadow-xl">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-gray-900">
+              {collection ? 'Edit Collection' : 'Add New Collection'}
+            </h3>
             <button
-              type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-              disabled={loading}
+              className="text-gray-400 hover:text-gray-600"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-              disabled={loading}
-            >
-              {loading ? 'Creating...' : 'Create Collection'}
+              <X className="h-6 w-6" />
             </button>
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Collection Name *
+              </label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  title: e.target.value,
+                  metadata: {
+                    ...prev.metadata,
+                    name: e.target.value
+                  }
+                }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., Engagement Rings"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description
+              </label>
+              <textarea
+                value={formData.metadata.description}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  metadata: {
+                    ...prev.metadata,
+                    description: e.target.value
+                  }
+                }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={3}
+                placeholder="Brief description of this collection..."
+              />
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="active"
+                checked={formData.metadata.active}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  metadata: {
+                    ...prev.metadata,
+                    active: e.target.checked
+                  }
+                }))}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="active" className="ml-2 block text-sm text-gray-700">
+                Active collection
+              </label>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading || !formData.title.trim()}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50"
+              >
+                {loading ? 'Saving...' : (collection ? 'Update Collection' : 'Create Collection')}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   )
