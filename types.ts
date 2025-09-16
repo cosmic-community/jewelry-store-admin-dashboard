@@ -8,11 +8,13 @@ export interface CosmicObject {
   type: string;
   created_at: string;
   modified_at: string;
+  thumbnail?: string;
 }
 
 // Product interface with jewelry-specific metadata
 export interface Product extends CosmicObject {
   type: 'products';
+  thumbnail?: string;
   metadata: {
     name: string;
     description?: string;
